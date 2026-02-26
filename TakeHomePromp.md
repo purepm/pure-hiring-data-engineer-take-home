@@ -1,4 +1,4 @@
-# Senior Data Engineer — Take-Home Assessment
+# Data Engineer — Take-Home Assessment
 
 ## Overview
 This assessment is designed to evaluate your ability to work with a realistic property management data model. You have been provided with a PostgreSQL 14 schema and seed data. Please read the data model notes carefully before writing any queries.
@@ -75,21 +75,31 @@ We need to track the financial activity on each lease. Add tables to support the
 
 **Important relationship rule:** A charge can be partially or fully paid by one or more receipts, and a single receipt can be applied toward one or more charges. Your model must support this.
 
-Things to consider and be prepared to discuss:
-- How do you determine the outstanding balance on a charge?
-- How do you handle a receipt that only partially covers a charge?
-- How would you validate that the amounts applied across all charges for a receipt don't exceed the receipt's total?
+### 2c. Database Function — Lease Balance Query
+
+Create a PostgreSQL function `pure.get_lease_balances` that encapsulates the lease balance query you would use in Part 3.
+
+**Requirements:**
+- The function must accept a single parameter: an array of `integer` property IDs
+- When the array is empty (or not provided), the function should return balances for **all** leases
+- When property IDs are provided, results should be filtered to only those properties
+- The return type should be a table with columns covering all lease, unit, property, address, and balance fields needed for the Part 3 report
+
+Be prepared to discuss your choice of function language (`sql` vs `plpgsql`), return type, and volatility classification.
 
 ---
 
 ## Part 3 — Python: Lease Balance Report
 
-Write a Python function that queries the database using **pandas** and returns a JSON string containing the outstanding balance for every lease, along with the associated unit and property details.
+Write a Python function that calls the `pure.get_lease_balances` database function you created in Part 2c and returns the results as a JSON string.
 
 ### Function Signature
 
 ```python
-def get_lease_balances(conn: psycopg2.extensions.connection) -> str:
+def get_lease_balances(
+    conn: psycopg2.extensions.connection,
+    property_ids: Optional[list[int]] = None,
+) -> str:
 ```
 
 You may assume a `psycopg2` connection is passed in — you do not need to handle connection setup, but your code should demonstrate awareness of proper resource cleanup.
@@ -109,8 +119,8 @@ The returned JSON should be an array of objects. Each object must include:
 
 ### Requirements
 
-- Use `pandas` (`pd.read_sql_query`) to load query results into a DataFrame
-- The balance figures must be derived from the `charge` and `receipt_charge` tables you designed in Part 2
+- Use `pandas` (`pd.read_sql_query`) to call `pure.get_lease_balances` and load results into a DataFrame
+- The function must accept an optional `property_ids` list; passing `None` or an empty list should return all leases
 - Leases with no charges should appear in the results with all balance fields set to `0`
 - Dates must be serialised as ISO 8601 strings (e.g. `"2025-03-01"`)
 - Numeric/Decimal values from the database must be coerced to native Python floats
